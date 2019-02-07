@@ -413,9 +413,9 @@ def does_lib_replicate_exist(replicates_json, lib_accession,
         results.append(rep["uuid"])
     return results
 
-def requests_retry_session(retries=3,
+def requests_retry_session(retries=5,
                            method_whitelist=frozenset(['GET', 'POST']),
-                           backoff_factor=1,
+                           backoff_factor=300,
                            status_forcelist=(504,),
                            session=None):
     """

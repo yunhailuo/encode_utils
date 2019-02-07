@@ -720,6 +720,7 @@ class Connection():
         if profile_id != eup.Profile.FILE_PROFILE_ID:
             return
         self.upload_file(file_id=rec_id)
+        self.patch(payload={'_enc_id': rec_id, 'status': 'archived'})
 
     def after_submit_hooks(self, rec_id, profile_id, method=""):
         """
@@ -1631,7 +1632,7 @@ class Connection():
             return
         popen = subprocess.Popen(cmd,
                                  shell=True,
-                                 env=os.environ.update(aws_creds),
+                                 # env=os.environ.update(aws_creds),
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE)
         stdout, stderr = popen.communicate()
