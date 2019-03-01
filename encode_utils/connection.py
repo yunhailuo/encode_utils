@@ -1776,6 +1776,81 @@ class Connection():
         experiments = self.search(url=query_string)
         return experiments
 
+    def set_status(self, record_id, status, force_audit=False,
+                   force_transition=False, block_children=False):
+        """Change status of a record on the Portal.
+
+        This is for DCC admin only since the set_status endpoint is admin only.
+
+        Args:
+            record_id: `str`. A DCC identifier for the object on the Portal.
+            status: `str`. The new status which the `encode_id` will be changed
+                to.
+            force_audit: `bool`. `True` means to tell the ENCODE API to ignore
+                audits on records when changing status. `False` (default) means
+                to check audits before changing status and block change if
+                there are bad audits.
+            force_transition: `bool`. `True` means to overide the transition
+                table of ENCODE API and force the API to make whatever changes
+                specified by the status argument. `False` (default) means to
+                respect ENCODE API status transition table and do not make
+                abnormal status changes.
+            block_children: `bool`. `True` means to only change status for the
+                object specified by `record_id`. `False` (default) means to
+                change status for `record_id` and its related objects.
+
+        Returns:
+            `list`: The JSON response from the PATCH operation. A list of
+                objects with the corresponding status change happened (live
+                run) or will happen (dry run).
+
+        Raises:
+            AssertionError: if status of any object got changed in a dry run.
+            requests.exceptions.HTTPError: if the return status is not ok.
+        """
+        params = {
+            'block_children': bool(block_children),
+            'force_audit': bool(force_audit),
+            'force_transition': bool(force_transition),
+            'update': not self.check_dry_run()
+        }
+        url = euu.url_join([self.dcc_url, record_id, "@@set_status?"])
+        msg = (
+            "<<<<<< SETTING {encode_id} status through URL {url} with this "
+            "payload:\n\n{payload}\n\n"
+        )
+        payload = {'status': status}
+        payload.update(params)
+        self.debug_logger.debug(msg.format(
+            encode_id=record_id,
+            url=url,
+            payload=euu.print_format_dict(payload)
+        ))
+        response = requests.patch(
+            url,
+            auth=self.auth,
+            timeout=eu.TIMEOUT,
+            headers=euu.REQUEST_HEADERS_JSON,
+            params=params,
+            json={'status': status},
+            verify=False
+        )
+        response_json = response.json()
+
+        if response.ok:
+            if self.check_dry_run():
+                assert not response_json["changed"]
+                return response_json["considered"]
+            else:
+                self.debug_logger.debug("Success.")
+                return response_json["changed"]
+
+        message = "Failed to SET STATUS through {}".format(url)
+        self.log_error(message)
+        self.debug_logger.debug("<<<<<< DCC PATCH RESPONSE: ")
+        self.debug_logger.debug(euu.print_format_dict(response_json))
+        response.raise_for_status()
+
 # When appending "?datastore=database" to the URL. As Esther stated: "_indexer to the end of the
 # URL to see the status of elastic search like
 # https://www.encodeproject.org/_indexer if it's indexing it will say the status is "indexing",
