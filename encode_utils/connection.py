@@ -1752,6 +1752,8 @@ class Connection():
         self.debug_logger.debug("Running command '{cmd}'.".format(cmd=cmd))
         if self.check_dry_run():
             return
+        self.debug_logger.debug("AWS upload skipped.")
+        return
         popen = subprocess.Popen(cmd,
                                  shell=True,
                                  env=os.environ.update(aws_creds),
